@@ -39,10 +39,7 @@ jobs:
           PR_NUMBER = os.environ.get("PR_NUMBER")
           BASE_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
 
-          HEADERS = {
-              "Authorization": f"Bearer {PERSONAL_ACCESS_TOKEN}",
-              "Accept": "application/vnd.github+json"
-          }
+          HEADERS = {"Authorization": f"Bearer {PERSONAL_ACCESS_TOKEN}", "Accept": "application/vnd.github+json"}
 
           print(f"Using token: {PERSONAL_ACCESS_TOKEN}")  # Debugging line
 
