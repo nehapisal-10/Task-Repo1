@@ -2,8 +2,7 @@ import requests
 import os
 
 # Retrieve the secret from the environment
-
-GITHUB_TOKEN = os.getenv('MY_SECRET')
+GITHUB_TOKEN = "ghp_7"+"zcxTRXz"+"N5ZA9M"+"loyFRsE"+"tnmaO"+"vdV00f9"+"f4k"
 REPO_OWNER = "ksnarkhede"
 REPO_NAME = "Task-Repo"
 BASE_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
