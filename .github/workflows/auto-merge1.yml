@@ -1,84 +1,31 @@
-name: Auto Merge Specific Pull Request
+name: Run Python File
 
 on:
-  pull_request_review:
-    types:
-      - submitted  # Trigger when a review is submitted
+  push:
+    branches:
+      - main  # Trigger this workflow when pushing to the 'main' branch (or another branch)
+  pull_request:
+    branches:
+      - main  # Trigger on pull requests to 'main'
 
 jobs:
-  auto-merge:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: read
+  run-python-file:
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner for the workflow
+
     steps:
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
+    - name: Checkout repository
+      uses: actions/checkout@v2  # This action checks out your repository
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip requests
+    - name: Set up Python
+      uses: actions/setup-python@v4  # Sets up Python environment
+      with:
+        python-version: '3.9'  # Specify the Python version you want (e.g., 3.9)
 
-      - name: Auto-merge specific PR after approval
-        shell: /usr/bin/bash -e {0}
-        env:
-          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          REPO_OWNER: ksnarkhede
-          REPO_NAME: Task-Repo
-          PR_NUMBER: ${{ github.event.pull_request.number }}  # Use dynamic PR number
-        run: |
-          python <<EOF
-          import requests
-          import os
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        
 
-          PERSONAL_ACCESS_TOKEN = os.environ.get("PERSONAL_ACCESS_TOKEN")
-          REPO_OWNER = os.environ.get("REPO_OWNER")
-          REPO_NAME = os.environ.get("REPO_NAME")
-          PR_NUMBER = os.environ.get("PR_NUMBER")
-          BASE_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
-
-          HEADERS = {"Authorization": f"Bearer {PERSONAL_ACCESS_TOKEN}", "Accept": "application/vnd.github+json"}
-
-          print(f"Using token: {PERSONAL_ACCESS_TOKEN}")  # Debugging line
-
-          def check_reviews(pr_number, required_approvals=1):
-              """Check if the PR has the required number of approved reviews."""
-              url = f"{BASE_URL}/pulls/{pr_number}/reviews"
-              response = requests.get(url, headers=HEADERS)
-              if response.status_code == 200:
-                  reviews = response.json()
-                  approved_count = sum(1 for review in reviews if review["state"] == "APPROVED")
-                  return approved_count >= required_approvals
-              else:
-                  print(f"Error fetching reviews for PR #{pr_number}: {response.status_code}")
-                  return False
-
-          def merge_pull_request(pr_number, merge_method="squash", commit_title=None, commit_message=None):
-              """Merge the PR if all conditions are met."""
-              url = f"{BASE_URL}/pulls/{pr_number}/merge"
-              payload = {"merge_method": merge_method}
-              if commit_title:
-                  payload["commit_title"] = commit_title
-              if commit_message:
-                  payload["commit_message"] = commit_message
-
-              response = requests.put(url, headers=HEADERS, json=payload)
-              if response.status_code == 200:
-                  print(f"Successfully merged PR #{pr_number}.")
-              else:
-                  print(f"Error merging PR #{pr_number}: {response.status_code}")
-
-          # Main Logic
-          if check_reviews(PR_NUMBER, required_approvals=1):
-              print(f"PR #{PR_NUMBER} has the required approvals. Merging...")
-              merge_pull_request(
-                  PR_NUMBER,
-                  merge_method="squash",
-                  commit_title=f"Merging PR #{PR_NUMBER}",
-                  commit_message="Merged automatically after approval using GitHub Actions."
-              )
-          else:
-              print(f"PR #{PR_NUMBER} does not have the required approvals. Skipping merge.")
-          EOF
+    - name: Run Python script
+      run: |
+        python Testfile.py  # Replace with the path to your Python file, e.g., 'scripts/myscript.py'
