@@ -1,28 +1,32 @@
 name: Auto Merge
- 
+
 on:
   pull_request_review:
     types:
       - submitted  # Trigger when a review is submitted (approved, changes requested, etc.)
- 
+
 jobs:
   automerge:
     runs-on: ubuntu-latest
     if: ${{ always() }}  # Ensure this job runs after any change in PR state
- 
+
     permissions:
       contents: read
       pull-requests: write
       actions: write
- 
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
- 
-      - name: Ensure PR is mergeable
+
+      - name: Debugging: Check if GitHub Token is Available
+        run: |
+          echo "Token is available: ${{ secrets.GITHUB_TOKEN != '' }}"
+        
+      - name: Ensure PR is mergeable (using GH_TOKEN for GitHub CLI)
         id: mergeable
         env:
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Use GitHub token for authentication with the CLI
         run: |
           pr_details=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable --jq .)
           echo "PR Details: $pr_details"
@@ -44,12 +48,12 @@ jobs:
             echo "Unexpected mergeable state: $mergeable"
             exit 1
           fi
- 
-      - name: Ensure Required Approvals
+
+      - name: Ensure Required Approvals (using GITHUB_TOKEN)
         id: approvals
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}  # Use GitHub token for authentication
           script: |
             // Fetch the reviews of the pull request
             const { data: reviews } = await github.rest.pulls.listReviews({
@@ -70,11 +74,11 @@ jobs:
             } else {
               console.log(`Required approval(s) granted.`);
             }
- 
-      - name: Automerge Script
+
+      - name: Automerge Script (using GITHUB_TOKEN for API calls)
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}  # Use GitHub token for authentication
           script: |
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -98,7 +102,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: context.payload.pull_request.number,
-                merge_method: "squash",
+                merge_method: "squash",  # Adjust the merge method if needed
                 commit_title: "Auto-merged by GitHub Actions"
               });
             } else {
