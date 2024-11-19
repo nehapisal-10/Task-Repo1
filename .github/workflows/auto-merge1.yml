@@ -3,7 +3,7 @@ name: Auto Merge Specific Pull Request
 on:
   pull_request_review:
     types:
-      - submitted
+      - submitted  # Trigger when a review is submitted
 
 jobs:
   auto-merge:
@@ -16,6 +16,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip requests
 
       - name: Auto-merge specific PR after approval
         shell: /usr/bin/bash -e {0}
@@ -41,6 +45,7 @@ jobs:
           }
 
           def check_reviews(pr_number, required_approvals=1):
+              """Check if the PR has the required number of approved reviews."""
               url = f"{BASE_URL}/pulls/{pr_number}/reviews"
               response = requests.get(url, headers=HEADERS)
               if response.status_code == 200:
@@ -52,6 +57,7 @@ jobs:
                   return False
 
           def merge_pull_request(pr_number, merge_method="squash", commit_title=None, commit_message=None):
+              """Merge the PR if all conditions are met."""
               url = f"{BASE_URL}/pulls/{pr_number}/merge"
               payload = {"merge_method": merge_method}
               if commit_title:
@@ -65,6 +71,7 @@ jobs:
               else:
                   print(f"Error merging PR #{pr_number}: {response.status_code}")
 
+          # Main Logic
           if check_reviews(PR_NUMBER, required_approvals=1):
               print(f"PR #{PR_NUMBER} has the required approvals. Merging...")
               merge_pull_request(
