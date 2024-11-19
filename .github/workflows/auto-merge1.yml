@@ -1,13 +1,9 @@
 name: Run Python File
 
 on:
-  push:
-    branches:
-      - main  # Trigger this workflow when pushing to the 'main' branch (or another branch)
-  pull_request:
-    branches:
-      - main  # Trigger on pull requests to 'main'
-
+  pull_request_review:
+    types:
+      - submitted
 jobs:
   run-python-file:
     runs-on: ubuntu-latest  # Use the latest Ubuntu runner for the workflow
