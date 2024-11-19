@@ -24,6 +24,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests  # Install requests library
 
+      - name: Install Xvfb and ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb imagemagick  # Install Xvfb and ImageMagick
+
+      - name: Start Xvfb
+        run: |
+          nohup Xvfb :99 -screen 0 1024x768x24 &  # Start Xvfb in the background
+          export DISPLAY=:99  # Set the display to the virtual display
+
       - name: Run auto merge script
         run: |
           import os
