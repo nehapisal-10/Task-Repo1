@@ -28,6 +28,6 @@ jobs:
 
     - name: Run Python script
       run: |
-        python Testfile.py ${{ secrets.PAT}}  # Replace with the actual input arguments for your script
+        python Testfile.py   # Replace with the actual input arguments for your script
       env:
-        MY_ENV_VAR: "value"  # If you need to pass environment variables to the script
+        MY_SECRET: ${{ secrets.PERSONAL_ACCESS_TOKEN }} # If you need to pass environment variables to the script
