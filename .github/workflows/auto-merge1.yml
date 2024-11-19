@@ -29,5 +29,4 @@ jobs:
     - name: Run Python script
       run: |
         python Testfile.py   # Replace with the actual input arguments for your script
-      env:
-        MY_SECRET: ${{ secrets.PERSONAL_ACCESS_TOKEN }} # If you need to pass environment variables to the script
+     
