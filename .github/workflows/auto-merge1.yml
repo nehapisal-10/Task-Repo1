@@ -44,6 +44,8 @@ jobs:
               "Accept": "application/vnd.github+json"
           }
 
+          print(f"Using token: {PERSONAL_ACCESS_TOKEN}")  # Debugging line
+
           def check_reviews(pr_number, required_approvals=1):
               """Check if the PR has the required number of approved reviews."""
               url = f"{BASE_URL}/pulls/{pr_number}/reviews"
