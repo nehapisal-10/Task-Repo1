@@ -27,7 +27,7 @@ jobs:
           PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           REPO_OWNER: ksnarkhede
           REPO_NAME: Task-Repo
-          PR_NUMBER: 22
+          PR_NUMBER: ${{ github.event.pull_request.number }}  # Use dynamic PR number
         run: |
           python <<EOF
           import requests
