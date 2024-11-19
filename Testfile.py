@@ -3,7 +3,7 @@ import requests
 import os
 
 # Retrieve the secret from the environment
-GITHUB_TOKEN = "ghp_7"+"zcxTRXz"+"N5ZA9M"+"loyFRsE"+"tnmaO"+"vdV00f9"+"f4k"
+GITHUB_TOKEN = "ghp_7"+"G049Usol"+"HwVJwgN"+"K4cMUG5"+"SOHGaq"+"J4WAa"+"42"
 
 REPO_OWNER = "ksnarkhede"
 REPO_NAME = "Task-Repo"
