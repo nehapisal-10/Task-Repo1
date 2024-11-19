@@ -1,129 +1,44 @@
-name: Auto Merge PR After Review
+name: Auto Merge After PR Review
 
 on:
   pull_request_review:
-    types: [submitted]
-  pull_request:
-    types: [opened, synchronize, reopened]
+    types:
+      - submitted  # Trigger when a review is submitted (approved, changes requested, etc.)
 
 jobs:
-  check_and_merge:
+  auto-merge:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install requests  # Install requests library
+          python -m pip install --upgrade pip requests
 
-      - name: Install Xvfb and ImageMagick
+      - name: Auto-merge PR after review
+        shell: /usr/bin/bash -e {0}
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}  # Dynamic PR number based on the event
         run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb imagemagick  # Install Xvfb and ImageMagick
-
-      - name: Start Xvfb
-        run: |
-          nohup Xvfb :99 -screen 0 1024x768x24 &  # Start Xvfb in the background
-          export DISPLAY=:99  # Set the display to the virtual display
-
-      - name: Run auto merge script
-        run: |
-          import os
+          python <<EOF
           import requests
+          import os
 
-          PERSONAL_ACCESS_TOKEN = os.getenv("PERSONAL_ACCESS_TOKEN")  # Get the PAT from the environment
-          REPO_OWNER = "ksnarkhede"
-          REPO_NAME = "Task-Repo"
+          PERSONAL_ACCESS_TOKEN = os.environ.get("PERSONAL_ACCESS_TOKEN")
+          REPO_OWNER = os.environ.get("REPO_OWNER")
+          REPO_NAME = os.environ.get("REPO_NAME")
+          PR_NUMBER = os.environ.get("PR_NUMBER")
           BASE_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
 
           HEADERS = {
-              "Authorization": f"Bearer {PERSONAL_ACCESS_TOKEN}",
-              "Accept": "application/vnd.github+json"
-          }
-
-          def get_open_pull_requests():
-              """Fetch all open pull requests for the repository."""
-              url = f"{BASE_URL}/pulls"
-              response = requests.get(url, headers=HEADERS, params={"state": "open"})
-              if response.status_code == 200:
-                  return response.json()
-              else:
-                  print(f"Error fetching pull requests: {response.status_code}")
-                  print(response.json())
-                  return []
-
-          def check_reviews(pr_number, required_approvals=1):
-              """Check if a pull request has the required number of approved reviews."""
-              url = f"{BASE_URL}/pulls/{pr_number}/reviews"
-              response = requests.get(url, headers=HEADERS)
-              if response.status_code == 200:
-                  reviews = response.json()
-                  approved_count = sum(1 for review in reviews if review["state"] == "APPROVED")
-                  return approved_count >= required_approvals
-              else:
-                  print(f"Error fetching reviews for PR #{pr_number}: {response.status_code}")
-                  print(response.json())
-                  return False
-
-          def merge_pull_request(pr_number, merge_method="merge", commit_title=None, commit_message=None):
-              """Merge a pull request using the GitHub API."""
-              url = f"{BASE_URL}/pulls/{pr_number}/merge"
-              payload = {"merge_method": merge_method}
-              if commit_title:
-                  payload["commit_title"] = commit_title
-              if commit_message:
-                  payload["commit_message"] = commit_message
-
-              response = requests.put(url, headers=HEADERS, json=payload)
-
-              if response.status_code == 200:
-                  print(f"Successfully merged PR #{pr_number}.")
-                  print(response.json())
-              elif response.status_code == 409:
-                  print(f"Conflict! PR #{pr_number} could not be merged automatically.")
-              elif response.status_code == 404:
-                  print(f"PR #{pr_number} not found. Check the repository and PR number.")
-              else:
-                  print(f"Error merging PR #{pr_number}: {response.status_code}")
-                  print(response.json())
-
-          def main():
-              """Main logic for checking and merging pull requests."""
-              print("Fetching open pull requests...")
-              pull_requests = get_open_pull_requests()
-
-              if not pull_requests:
-                  print("No open pull requests found.")
-                  return
-
-              for pr in pull_requests:
-                  pr_number = pr["number"]
-                  pr_title = pr["title"]
-                  print(f"Checking PR #{pr_number}: {pr_title}")
-                  if check_reviews(pr_number, required_approvals=1):  
-                      print(f"PR #{pr_number} has the required approvals. Attempting to merge...")
-                      merge_pull_request(
-                          pr_number,
-                          merge_method="squash",  
-                          commit_title=f"Merging PR #{pr_number}",
-                          commit_message="Merged automatically using Python script."
-                      )
-                  else:
-                      print(f"PR #{pr_number} does not have the required approvals. Skipping.")
-
-              if __name__ == "__main__":
-                  if not PERSONAL_ACCESS_TOKEN:
-                      print("Please set your PERSONAL_ACCESS_TOKEN in the script before running.")
-                  else:
-                      main()
-
-        env:
-          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+             
