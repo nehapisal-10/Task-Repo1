@@ -1,23 +1,9 @@
 name: Auto Merge
  
 on:
-  pull_request_target:
-    types:
-      - labeled
-      - unlabeled
-      - synchronize
-      - opened
-      - edited
-      - ready_for_review
-      - reopened
-      - unlocked
   pull_request_review:
     types:
-      - submitted
-  check_suite:
-    types:
-      - completed
-  status: {}
+      - submitted  # Trigger when a review is submitted (approved, changes requested, etc.)
  
 jobs:
   automerge:
