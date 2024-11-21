@@ -1,12 +1,9 @@
 name: Java CI
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  pull_request_review:
+    types:
+      - submitted  # Trigger when a review is submitted (approved or changes requested)
 
 jobs:
   build:
