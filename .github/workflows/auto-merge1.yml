@@ -33,7 +33,7 @@ jobs:
             
             // Filter reviews that have been "APPROVED"
             const approvedReviews = reviews.filter(review => review.state === "APPROVED");
-            const requiredApprovals = 1;  // Set this according to your repo's approval rules
+            const requiredApprovals = 2;  // Set this according to your repo's approval rules
 
             console.log(`Found ${approvedReviews.length} approvals.`);
 
