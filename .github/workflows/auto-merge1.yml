@@ -3,9 +3,10 @@ name: Auto Merge
 on:
   workflow_run:
     workflows:
-      - CI Python
+      - Workflow 1
+      - Workflow 2
     types:
-      - completed  # Trigger when a review is submitted (approved or changes requested)
+      - completed
 
 jobs:
   automerge:
