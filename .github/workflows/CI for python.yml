@@ -1,9 +1,11 @@
 name: CI Workflow
  
 on:
-  pull_request_review:
+  workflow_run:
+    workflows:
+      - Java CI
     types:
-      - submitted  # Trigger when a review is submitted (approved or changes requested)
+      - completed # Trigger when a review is submitted (approved or changes requested)
 jobs:
   build:
     runs-on: ${{matrix.os}}
