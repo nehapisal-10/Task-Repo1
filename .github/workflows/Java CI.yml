@@ -1,4 +1,5 @@
-name: Java CI
+name: Workflow 1
+
 
 on:
   pull_request_review:
