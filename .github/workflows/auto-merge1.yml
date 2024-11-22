@@ -1,12 +1,9 @@
 name: Auto Merge
 
 on:
-  workflow_run:
-    workflows:
-      - Workflow 1
-  
+  pull_request_review:
     types:
-      - completed
+      - submitted  # Trigger when a review is submitted (approved or changes requested)
 
 jobs:
   automerge:
