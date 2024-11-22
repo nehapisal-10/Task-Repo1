@@ -24,3 +24,6 @@ jobs:
 
     - name: Run Java program
       run: java Main
+
+    - name: Step in Java CI
+      run: echo "Running JAVA CI"
