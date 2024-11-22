@@ -4,6 +4,7 @@ on:
   pull_request_review:
     types:
       - submitted  # Trigger when a review is submitted (approved or changes requested)
+
 jobs:
   automerge:
     runs-on: ubuntu-latest
@@ -15,7 +16,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Ensure Required Approvals
         id: approvals
         uses: actions/github-script@v6
@@ -28,46 +29,46 @@ jobs:
               pull_number: context.payload.pull_request.number
             });
 
-            // Debugging: log all review states
-            console.log(`Reviews submitted: ${reviews.map(review => review.state).join(", ")}`);
-            
-            // Filter reviews that have been "APPROVED"
             const approvedReviews = reviews.filter(review => review.state === "APPROVED");
-            const requiredApprovals = 1;  // Set this according to your repo's approval rules
-
-            console.log(`Found ${approvedReviews.length} approvals.`);
+            const requiredApprovals = 1; // Adjust as per your repo's requirements
 
             if (approvedReviews.length < requiredApprovals) {
               core.setFailed(`PR requires at least ${requiredApprovals} approval(s).`);
-            } else {
-              console.log(`Required approval(s) granted.`);
             }
-            
-      - name: Ensure PR is mergeable
+
+      - name: Ensure All Checks Have Passed
+        id: checks
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { data: statuses } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request.head.sha
+            });
+
+            const failedChecks = statuses.check_runs.filter(check => check.conclusion !== "success");
+
+            if (failedChecks.length > 0) {
+              core.setFailed(`Not all checks have passed. Failed checks: ${failedChecks.map(c => c.name).join(", ")}`);
+            }
+
+      - name: Ensure PR is Mergeable
         id: mergeable
-        env:
-          GH_TOKEN: ${{ github.token }}  # Default GitHub token provided by GitHub Actions
-        run: |
-          pr_details=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable --jq .)
-          echo "PR Details: $pr_details"
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
 
-          # Fetch the mergeable field
-          mergeable=$(echo "$pr_details" | jq -r .mergeable)
-
-          echo "Mergeable state: $mergeable"
-
-          if [ "$mergeable" = "MERGEABLE" ]; then
-            echo "Pull request is mergeable."
-          elif [ "$mergeable" = "false" ]; then
-            echo "Pull request is not mergeable."
-            exit 1
-          elif [ "$mergeable" = "null" ]; then
-            echo "Mergeable state is unknown. Please check the PR status."
-            exit 1
-          else
-            echo "Unexpected mergeable state: $mergeable"
-            exit 1
-          fi
+            if (!pr.mergeable) {
+              core.setFailed("Pull request is not mergeable.");
+            }
 
       - name: Automerge Script
         uses: actions/github-script@v6
@@ -80,18 +81,7 @@ jobs:
               pull_number: context.payload.pull_request.number
             });
 
-            if (pr.mergeable_state === "dirty") {
-              console.log("Pull request has merge conflicts.");
-              return;
-            }
-
             if (pr.mergeable_state === "clean") {
-              console.log("PR is clean and ready for merging.");
-            } else {
-              console.log("Mergeable state:", pr.mergeable_state);
-            }
-
-            if (pr.mergeable) {
               await github.rest.pulls.merge({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -100,5 +90,5 @@ jobs:
                 commit_title: "Auto-merged by GitHub Actions"
               });
             } else {
-              console.log("Pull request is not mergeable.");
+              console.log("Pull request is not clean and cannot be merged.");
             }
