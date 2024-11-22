@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows:
       - Workflow 1
-      - Workflow 2
+  
     types:
       - completed
 jobs:
