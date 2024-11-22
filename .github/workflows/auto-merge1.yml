@@ -1,9 +1,11 @@
 name: Auto Merge
 
 on:
-  pull_request_review:
+  workflow_run:
+    workflows:
+      - CI Python
     types:
-      - submitted  # Trigger when a review is submitted (approved or changes requested)
+      - completed  # Trigger when a review is submitted (approved or changes requested)
 
 jobs:
   automerge:
