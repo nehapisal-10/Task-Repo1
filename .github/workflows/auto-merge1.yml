@@ -7,18 +7,16 @@ on:
   
     types:
       - completed
+
 jobs:
   ensure-approvals:
     runs-on: ubuntu-latest
     permissions:
-      contents: read       # Required to access repo contents
-      pull-requests: write # Required to list PR reviews and perform actions
+      contents: read       # Read access to repository contents
+      pull-requests: write # Required to list PR reviews and merge PRs
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Debug Payload
+      - name: Debug Event Payload
         uses: actions/github-script@v6
         with:
           github-token: ${{ github.token }}
@@ -39,24 +37,20 @@ jobs:
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
+              pull_number: context.payload.pull_request.number,
             });
 
             // Filter for approved reviews
             const approvedReviews = reviews.filter(review => review.state === "APPROVED");
+            const requiredApprovals = 2; // Adjust the number of required approvals here
 
-            const requiredApprovals = 2; // Adjust as per your requirements
-            console.log(`Found ${approvedReviews.length} approvals out of ${requiredApprovals} required.`);
+            console.log(`Found ${approvedReviews.length} approval(s). Required: ${requiredApprovals}.`);
 
             if (approvedReviews.length < requiredApprovals) {
               core.setFailed(`Pull request requires at least ${requiredApprovals} approval(s).`);
             } else {
-              console.log(`Approval requirement satisfied.`);
+              console.log("All required approvals are in place.");
             }
-
-      - name: Approvals Check Result
-        if: ${{ steps.approvals.outcome == 'success' }}
-        run: echo "All required approvals are in place."
 
       - name: Merge Pull Request
         if: ${{ steps.approvals.outcome == 'success' }}
@@ -66,12 +60,24 @@ jobs:
           script: |
             const pull_number = context.payload.pull_request.number;
 
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number,
+            });
+
+            if (pr.mergeable_state !== "clean") {
+              console.log(`Pull request is not in a clean state for merging. State: ${pr.mergeable_state}`);
+              core.setFailed("Cannot merge pull request because it is not in a clean state.");
+              return;
+            }
+
             await github.rest.pulls.merge({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number,
-              merge_method: "squash", # Change to "merge" or "rebase" if desired
-              commit_title: "Auto-merged by Ensure Required Approvals Workflow"
+              merge_method: "squash", # Change to "merge" or "rebase" if needed
+              commit_title: "Auto-merged by GitHub Actions after approval checks",
             });
 
             console.log("Pull request merged successfully.");
