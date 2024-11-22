@@ -3,7 +3,11 @@ name: Auto Merge
 on:
   pull_request_review:
     types:
-      - submitted  # Trigger when a review is submitted (approved or changes requested)
+      - submitted # Trigger when a review is submitted (approved or changes requested)
+  workflow_run:
+    workflows: ["Workflow 1"] # Name of the workflow this depends on
+    types:
+      - completed
 
 jobs:
   automerge:
@@ -16,13 +20,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Ensure Required Approvals
         id: approvals
         uses: actions/github-script@v6
         with:
           github-token: ${{ github.token }}
           script: |
+            if (!context.payload.pull_request) {
+              console.log("No pull request context found in the event payload. Exiting.");
+              return;
+            }
+
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -43,12 +52,18 @@ jobs:
             } else {
               console.log(`Required approval(s) granted.`);
             }
-            
+
       - name: Ensure PR is mergeable
+        if: ${{ steps.approvals.outcome == 'success' }}
         id: mergeable
         env:
           GH_TOKEN: ${{ github.token }}  # Default GitHub token provided by GitHub Actions
         run: |
+          if [ -z "${{ github.event.pull_request.number }}" ]; then
+            echo "No pull request number found in the event payload. Exiting."
+            exit 0
+          fi
+
           pr_details=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable --jq .)
           echo "PR Details: $pr_details"
 
@@ -71,10 +86,16 @@ jobs:
           fi
 
       - name: Automerge Script
+        if: ${{ steps.mergeable.outcome == 'success' }}
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           script: |
+            if (!context.payload.pull_request) {
+              console.log("No pull request context found in the event payload. Exiting.");
+              return;
+            }
+
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -100,6 +121,7 @@ jobs:
                 merge_method: "squash",
                 commit_title: "Auto-merged by GitHub Actions"
               });
+              console.log("Pull request merged successfully.");
             } else {
               console.log("Pull request is not mergeable.");
             }
