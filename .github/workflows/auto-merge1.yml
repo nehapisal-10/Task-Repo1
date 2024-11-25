@@ -1,18 +1,148 @@
+# # .github/workflows/workflow-2.yml
+# name: Workflow 2
+
+# on:
+#   repository_dispatch:
+#     types: [start-workflow-2]
+
+# jobs:
+#   process-data:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout Code
+#         uses: actions/checkout@v3
+
+#       - name: Access PR Number
+#         run: |
+#           echo "Received PR number from Workflow 1: ${{ github.event.client_payload.pr_number }}"
+
+
 # .github/workflows/workflow-2.yml
 name: Workflow 2
 
 on:
   repository_dispatch:
     types: [start-workflow-2]
+ # Trigger when a review is submitted (approved or changes requested)
+
 
 jobs:
-  process-data:
+  automerge:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read       # Read repository content
+      pull-requests: write # Write access to PRs (to merge them)
+      actions: write       # Allow executing actions
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Access PR Number
+      - name: Ensure Required Approvals
+        id: approvals
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const prNumber = ${{ github.event.client_payload.pr_number }};  # Get PR number from workflow dispatch
+            if (!prNumber) {
+              console.log("No PR number found in the event payload. Exiting.");
+              return;
+            }
+
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: "ksnarkhede",
+              repo: "Task-Repo",
+              pull_number: prNumber
+            });
+
+            // Debugging: log all review states
+            console.log(`Reviews submitted: ${reviews.map(review => review.state).join(", ")}`);
+            
+            // Filter reviews that have been "APPROVED"
+            const approvedReviews = reviews.filter(review => review.state === "APPROVED");
+            const requiredApprovals = 1;  # Set this according to your repo's approval rules
+
+            console.log(`Found ${approvedReviews.length} approvals.`);
+
+            if (approvedReviews.length < requiredApprovals) {
+              core.setFailed(`PR requires at least ${requiredApprovals} approval(s).`);
+            } else {
+              console.log(`Required approval(s) granted.`);
+            }
+
+      - name: Ensure PR is mergeable
+        if: ${{ steps.approvals.outcome == 'success' }}
+        id: mergeable
+        env:
+          GH_TOKEN: ${{ github.token }}  # Default GitHub token provided by GitHub Actions
         run: |
-          echo "Received PR number from Workflow 1: ${{ github.event.client_payload.pr_number }}"
+          prNumber="${{ github.event.client_payload.pr_number }}"  # Get PR number from workflow dispatch
+          if [ -z "$prNumber" ]; then
+            echo "No pull request number found in the event payload. Exiting."
+            exit 0
+          fi
+
+          pr_details=$(gh pr view $prNumber --json mergeable --jq .)
+          echo "PR Details: $pr_details"
+
+          # Fetch the mergeable field
+          mergeable=$(echo "$pr_details" | jq -r .mergeable)
+
+          echo "Mergeable state: $mergeable"
+
+          if [ "$mergeable" = "MERGEABLE" ]; then
+            echo "Pull request is mergeable."
+          elif [ "$mergeable" = "false" ]; then
+            echo "Pull request is not mergeable."
+            exit 1
+          elif [ "$mergeable" = "null" ]; then
+            echo "Mergeable state is unknown. Please check the PR status."
+            exit 1
+          else
+            echo "Unexpected mergeable state: $mergeable"
+            exit 1
+          fi
+
+      - name: Automerge Script
+        if: ${{ steps.mergeable.outcome == 'success' }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          script: |
+            const prNumber = ${{ github.event.client_payload.pr_number }};  # Get PR number from workflow dispatch
+            if (!prNumber) {
+              console.log("No pull request context found in the event payload. Exiting.");
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: "ksnarkhede",
+              repo: "Task-Repo",
+              pull_number: prNumber
+            });
+
+            if (pr.mergeable_state === "dirty") {
+              console.log("Pull request has merge conflicts.");
+              return;
+            }
+
+            if (pr.mergeable_state === "clean") {
+              console.log("PR is clean and ready for merging.");
+            } else {
+              console.log("Mergeable state:", pr.mergeable_state);
+            }
+
+            if (pr.mergeable) {
+              await github.rest.pulls.merge({
+                owner: "ksnarkhede",
+                repo: "Task-Repo",
+                pull_number: prNumber,
+                merge_method: "squash",
+                commit_title: "Auto-merged by GitHub Actions"
+              });
+              console.log("Pull request merged successfully.");
+            } else {
+              console.log("Pull request is not mergeable.");
+            }
