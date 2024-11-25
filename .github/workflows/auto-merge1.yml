@@ -5,7 +5,8 @@ on:
   #   types:
   #     - submitted # Trigger when a review is submitted (approved or changes requested)
   workflow_run:
-    workflows: ["Workflow 1"] # Name of the workflow this depends on
+    workflows: 
+      - Workflow 1 # Name of the workflow this depends on
     types:
       - completed
 
