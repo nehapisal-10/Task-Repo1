@@ -8,19 +8,30 @@ on:
       - completed
 
 jobs:
-  print-pr-number:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Extract and Print PR Number
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '17'
+
+      - name: Compile Java program
+        run: javac Main.java
+
+      - name: Run Java program
+        run: java Main
+
+      - name: Step in Java CI
+        run: echo "Running JAVA CI"
+
+      - name: Capture and Output PR Number
+        id: capture-pr
         run: |
-          # Ensure pull request information is available
-          if [ "${{ github.event.workflow_run.pull_requests }}" == "[]" ]; then
-            echo "No pull request information found in the event payload. Exiting."
-            exit 1
-          fi
-
-          # Extract the PR number from the event payload
-          PR_NUMBER=$(echo "${{ toJson(github.event.workflow_run.pull_requests) }}" | jq -r '.[0].number')
-
-          echo "Pull Request Number: $PR_NUMBER"
+          echo "Captured PR Number: ${{ github.event.pull_request.number }}"
+          echo "Hello Kshitij"
