@@ -2,9 +2,9 @@ name: Workflow 1
 
 on:
   pull_request_review:
-      types:
-        - submitted  # Trigger when a review is submitted (approved or changes requested)
-   
+    types:
+      - submitted  # Trigger when a review is submitted (approved or changes requested)
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,10 +28,8 @@ jobs:
       - name: Step in Java CI
         run: echo "Running JAVA CI"
 
-      # Step to extract and output PR number
-      - name: Capture PR Number
+      - name: Capture and Output PR Number
         id: capture-pr
-        run: echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-
-      - name: Output PR Number
-        run: echo "Pull Request Number - ${{ github.event.pull_request.number }}"
+        run: |
+          echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "Captured PR Number: ${{ github.event.pull_request.number }}"
