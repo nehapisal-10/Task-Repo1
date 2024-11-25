@@ -1,12 +1,9 @@
 name: Auto Merge
 
 on:
-  # pull_request_review:
-  #   types:
-  #     - submitted # Trigger when a review is submitted (approved or changes requested)
   workflow_run:
     workflows: 
-      - Workflow 1 # Name of the workflow this depends on
+      - Workflow 1 # Ensure this matches the name of Workflow 1
     types:
       - completed
 
@@ -22,21 +19,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Extract Pull Request Number
+        id: extract-pr
+        run: |
+          if [ "${{ github.event.workflow_run.pull_requests }}" == "[]" ]; then
+            echo "No pull request found in the event payload. Exiting."
+            exit 1
+          fi
+          # Extract the pull request number from the event payload
+          PR_NUMBER=$(echo "${{ toJson(github.event.workflow_run.pull_requests) }}" | jq -r '.[0].number')
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          echo "Pull Request Number: $PR_NUMBER"
+
       - name: Ensure Required Approvals
         id: approvals
         uses: actions/github-script@v6
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            if (!context.payload.pull_request) {
-              console.log("No pull request context found in the event payload. Exiting.");
+            const prNumber = process.env.PR_NUMBER;
+            if (!prNumber) {
+              console.log("No pull request number found. Exiting.");
               return;
             }
 
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
+              pull_number: prNumber
             });
 
             // Debugging: log all review states
@@ -44,7 +54,7 @@ jobs:
             
             // Filter reviews that have been "APPROVED"
             const approvedReviews = reviews.filter(review => review.state === "APPROVED");
-            const requiredApprovals = 1;  // Set this according to your repo's approval rules
+            const requiredApprovals = 1; // Set this according to your repo's approval rules
 
             console.log(`Found ${approvedReviews.length} approvals.`);
 
@@ -58,14 +68,14 @@ jobs:
         if: ${{ steps.approvals.outcome == 'success' }}
         id: mergeable
         env:
-          GH_TOKEN: ${{ github.token }}  # Default GitHub token provided by GitHub Actions
+          PR_NUMBER: ${{ env.PR_NUMBER }}
         run: |
-          if [ -z "${{ github.event.pull_request.number }}" ]; then
-            echo "No pull request number found in the event payload. Exiting."
-            exit 0
+          if [ -z "${PR_NUMBER}" ]; then
+            echo "No pull request number found in the environment. Exiting."
+            exit 1
           fi
 
-          pr_details=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable --jq .)
+          pr_details=$(gh pr view ${PR_NUMBER} --json mergeable --jq .)
           echo "PR Details: $pr_details"
 
           # Fetch the mergeable field
@@ -90,17 +100,18 @@ jobs:
         if: ${{ steps.mergeable.outcome == 'success' }}
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            if (!context.payload.pull_request) {
-              console.log("No pull request context found in the event payload. Exiting.");
+            const prNumber = process.env.PR_NUMBER;
+            if (!prNumber) {
+              console.log("No pull request number found. Exiting.");
               return;
             }
 
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
+              pull_number: prNumber
             });
 
             if (pr.mergeable_state === "dirty") {
@@ -118,7 +129,7 @@ jobs:
               await github.rest.pulls.merge({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                pull_number: context.payload.pull_request.number,
+                pull_number: prNumber,
                 merge_method: "squash",
                 commit_title: "Auto-merged by GitHub Actions"
               });
