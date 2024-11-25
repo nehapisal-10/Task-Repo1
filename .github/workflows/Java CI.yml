@@ -5,26 +5,13 @@ on:
     types:
       - submitted  
 jobs:
-  capture-pr-number:
+  trigger-workflow-2:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      # Step 2: Capture the PR number
-      - name: Get PR number
-        id: pr_number
-        run: echo "PR_NUMBER=$(echo $GITHUB_REF | awk -F'/' '{print $3}')" >> $GITHUB_ENV
-
-      # Step 3: Create a file with the PR number
-      - name: Create PR number file
-        run: echo "$PR_NUMBER" > pr-number.txt
-
-      # Step 4: Upload the PR number file as an artifact
-      - name: Upload PR number as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: pr-number
-          path: pr-number.txt
+      - name: Trigger Workflow 2 via Repository Dispatch
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -d '{"event_type": "start-workflow-2", "client_payload": {"pr_number": "${{ github.event.pull_request.number }}"}}' \
+            https://api.github.com/repos/ksnarkhede/Task-Repo/dispatches
