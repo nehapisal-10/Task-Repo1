@@ -1,31 +1,8 @@
-# # .github/workflows/workflow-2.yml
-# name: Workflow 2
-
-# on:
-#   repository_dispatch:
-#     types: [start-workflow-2]
-
-# jobs:
-#   process-data:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout Code
-#         uses: actions/checkout@v3
-
-#       - name: Access PR Number
-#         run: |
-#           echo "Received PR number from Workflow 1: ${{ github.event.client_payload.pr_number }}"
-
-
-# .github/workflows/workflow-2.yml
 name: Workflow 2
 
 on:
   repository_dispatch:
-    types: [start-workflow-2]
- # Trigger when a review is submitted (approved or changes requested)
-
+    types: [start-workflow-2]  # Match the event type used in Workflow 1
 
 jobs:
   automerge:
@@ -45,15 +22,20 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
-            const prNumber = ${{ github.event.client_payload.pr_number }};  # Get PR number from workflow dispatch
+            if (!context.payload.repository_dispatch) {
+              console.log("No repository_dispatch context found in the event payload. Exiting.");
+              return;
+            }
+
+            const prNumber = context.payload.client_payload.pr_number;
             if (!prNumber) {
-              console.log("No PR number found in the event payload. Exiting.");
+              console.log("No PR number found in the dispatch payload. Exiting.");
               return;
             }
 
             const { data: reviews } = await github.rest.pulls.listReviews({
-              owner: "ksnarkhede",
-              repo: "Task-Repo",
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               pull_number: prNumber
             });
 
@@ -62,7 +44,7 @@ jobs:
             
             // Filter reviews that have been "APPROVED"
             const approvedReviews = reviews.filter(review => review.state === "APPROVED");
-            const requiredApprovals = 1;  # Set this according to your repo's approval rules
+            const requiredApprovals = 1;  // Set this according to your repo's approval rules
 
             console.log(`Found ${approvedReviews.length} approvals.`);
 
@@ -70,7 +52,6 @@ jobs:
               core.setFailed(`PR requires at least ${requiredApprovals} approval(s).`);
             } else {
               console.log(`Required approval(s) granted.`);
-            }
 
       - name: Ensure PR is mergeable
         if: ${{ steps.approvals.outcome == 'success' }}
@@ -78,7 +59,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}  # Default GitHub token provided by GitHub Actions
         run: |
-          prNumber="${{ github.event.client_payload.pr_number }}"  # Get PR number from workflow dispatch
+          prNumber=${{ github.event.client_payload.pr_number }}
           if [ -z "$prNumber" ]; then
             echo "No pull request number found in the event payload. Exiting."
             exit 0
@@ -111,15 +92,20 @@ jobs:
         with:
           github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           script: |
-            const prNumber = ${{ github.event.client_payload.pr_number }};  # Get PR number from workflow dispatch
+            if (!context.payload.repository_dispatch) {
+              console.log("No repository_dispatch context found in the event payload. Exiting.");
+              return;
+            }
+
+            const prNumber = context.payload.client_payload.pr_number;
             if (!prNumber) {
-              console.log("No pull request context found in the event payload. Exiting.");
+              console.log("No PR number found in the dispatch payload. Exiting.");
               return;
             }
 
             const { data: pr } = await github.rest.pulls.get({
-              owner: "ksnarkhede",
-              repo: "Task-Repo",
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               pull_number: prNumber
             });
 
@@ -136,8 +122,8 @@ jobs:
 
             if (pr.mergeable) {
               await github.rest.pulls.merge({
-                owner: "ksnarkhede",
-                repo: "Task-Repo",
+                owner: context.repo.owner,
+                repo: context.repo.repo,
                 pull_number: prNumber,
                 merge_method: "squash",
                 commit_title: "Auto-merged by GitHub Actions"
