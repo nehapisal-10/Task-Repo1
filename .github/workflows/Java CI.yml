@@ -1,10 +1,10 @@
 name: Workflow 1
 
 on:
-  pull_request:
-    branches:
-      - main # Adjust this to your branch of interest
-
+  pull_request_review:
+      types:
+        - submitted  # Trigger when a review is submitted (approved or changes requested)
+   
 jobs:
   build:
     runs-on: ubuntu-latest
