@@ -1,3 +1,4 @@
+# .github/workflows/workflow-2.yml
 name: Workflow 2
 
 on:
@@ -11,15 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v3
 
-    - name: Download PR number artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: pr-number
+      - name: Download PR number artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: pr-number
 
-    - name: Read PR number from artifact
-      run: |
-        source pr-number
-        echo "The PR number is $PR_NUMBER"
+      - name: Read PR number from artifact
+        run: |
+          PR_NUMBER=$(cat pr-number.txt)
+          echo "The PR number is $PR_NUMBER"
