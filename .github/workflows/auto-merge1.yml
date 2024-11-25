@@ -2,7 +2,7 @@ name: Auto Merge
 
 on:
   workflow_run:
-    workflows: 
+    workflows:
       - Workflow 1 # Ensure this matches the name of Workflow 1
     types:
       - completed
@@ -67,15 +67,13 @@ jobs:
       - name: Ensure PR is mergeable
         if: ${{ steps.approvals.outcome == 'success' }}
         id: mergeable
-        env:
-          PR_NUMBER: ${{ env.PR_NUMBER }}
         run: |
-          if [ -z "${PR_NUMBER}" ]; then
+          if [ -z "${{ env.PR_NUMBER }}" ]; then
             echo "No pull request number found in the environment. Exiting."
             exit 1
           fi
 
-          pr_details=$(gh pr view ${PR_NUMBER} --json mergeable --jq .)
+          pr_details=$(gh pr view ${{ env.PR_NUMBER }} --json mergeable --jq .)
           echo "PR Details: $pr_details"
 
           # Fetch the mergeable field
