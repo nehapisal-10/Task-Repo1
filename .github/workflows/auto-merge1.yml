@@ -9,10 +9,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check if PR has all approvals
+    - name: Checkout the repository
+      uses: actions/checkout@v3
+
+    - name: Get the pull request number
+      id: pr
+      run: echo "PR_NUMBER=$(jq --raw-output .pull_request.number $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+
+    - name: Enable auto-merge if all approvals are in place
       uses: peter-evans/enable-pull-request-automerge@v2
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        pull-request-number: ${{ env.PR_NUMBER }}
 
     - name: Merge PR if all approvals are in place
       if: ${{ github.event.pull_request.reviews.approvals == github.event.pull_request.reviews.required_approvals }}
