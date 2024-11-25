@@ -2,28 +2,17 @@
 name: Workflow 2
 
 on:
-  workflow_run:
-    workflows: ["Workflow 1"]
-    types:
-      - completed
+  repository_dispatch:
+    types: [start-workflow-2]
 
 jobs:
-  use-pr-number:
+  process-data:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
-      - name: Check out code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Download the PR number artifact
-      - name: Download PR number artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: pr-number
-
-      # Step 3: Read the PR number from the downloaded artifact
-      - name: Read PR number
+      - name: Access PR Number
         run: |
-          PR_NUMBER=$(cat pr-number.txt)
-          echo "The PR number is $PR_NUMBER"
+          echo "Received PR number from Workflow 1: ${{ github.event.client_payload.pr_number }}"
