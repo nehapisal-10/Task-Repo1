@@ -12,15 +12,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the code
       - name: Check out code
         uses: actions/checkout@v3
 
+      # Step 2: Download the PR number artifact
       - name: Download PR number artifact
         uses: actions/download-artifact@v3
         with:
           name: pr-number
 
-      - name: Read PR number from artifact
+      # Step 3: Read the PR number from the downloaded artifact
+      - name: Read PR number
         run: |
           PR_NUMBER=$(cat pr-number.txt)
           echo "The PR number is $PR_NUMBER"
