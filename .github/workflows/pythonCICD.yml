@@ -30,7 +30,7 @@ jobs:
           import requests
           import os
 
-          GITHUB_TOKEN = ${{ }}
+          GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
           REPO_OWNER = "ksnarkhede"
           REPO_NAME = "Task-Repo"
           PR_NUMBER = "65"  # Add your specific PR number here
