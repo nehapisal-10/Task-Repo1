@@ -1,4 +1,4 @@
-name: Merge Pull Requests
+name: Merge Pull Request
 
 on:
   schedule:
@@ -23,85 +23,78 @@ jobs:
 
     - name: Run merge script
       env:
-        GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        python -c "
-import requests
-import os
+        import requests
+        import os
 
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-REPO_OWNER = 'ksnarkhede'
-REPO_NAME = 'Task-Repo'
-BASE_URL = f'https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}'
+        GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+        REPO_OWNER = 'ksnarkhede'
+        REPO_NAME = 'Task-Repo'
+        PR_NUMBER = '65'
+        BASE_URL = f'https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}'
 
-HEADERS = {
-    'Authorization': f'Bearer {GITHUB_TOKEN}',
-    'Accept': 'application/vnd.github+json'
-}
+        HEADERS = {
+            'Authorization': f'Bearer {GITHUB_TOKEN}',
+            'Accept': 'application/vnd.github+json'
+        }
 
-def get_open_pull_requests():
-    url = f'{BASE_URL}/pulls?state=open'
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f'Error fetching pull requests: {response.status_code}')
-        return []
+        def get_open_pull_requests():
+            url = f'{BASE_URL}/pulls?state=open'
+            response = requests.get(url, headers=HEADERS)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f'Error fetching pull requests: {response.status_code}')
+                return []
 
-def check_reviews(pr_number, required_approvals=1):
-    url = f'{BASE_URL}/pulls/{pr_number}/reviews'
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        reviews = response.json()
-        approved_count = sum(1 for review in reviews if review['state'] == 'APPROVED')
-        return approved_count >= required_approvals
-    else:
-        print(f'Error fetching reviews for PR #{pr_number}: {response.status_code}')
-        return False
+        def check_reviews(pr_number, required_approvals=1):
+            url = f'{BASE_URL}/pulls/{pr_number}/reviews'
+            response = requests.get(url, headers=HEADERS)
+            if response.status_code == 200:
+                reviews = response.json()
+                approved_count = sum(1 for review in reviews if review['state'] == 'APPROVED')
+                return approved_count >= required_approvals
+            else:
+                print(f'Error fetching reviews for PR #{pr_number}: {response.status_code}')
+                return False
 
-def merge_pull_request(pr_number, merge_method='merge', commit_title=None, commit_message=None):
-    url = f'{BASE_URL}/pulls/{pr_number}/merge'
-    payload = {'merge_method': merge_method}
-    if commit_title:
-        payload['commit_title'] = commit_title
-    if commit_message:
-        payload['commit_message'] = commit_message
+        def merge_pull_request(pr_number, merge_method='merge', commit_title=None, commit_message=None):
+            url = f'{BASE_URL}/pulls/{pr_number}/merge'
+            payload = {'merge_method': merge_method}
+            if commit_title:
+                payload['commit_title'] = commit_title
+            if commit_message:
+                payload['commit_message'] = commit_message
 
-    response = requests.put(url, headers=HEADERS, json=payload)
+            response = requests.put(url, headers=HEADERS, json=payload)
 
-    if response.status_code == 200:
-        print(f'Successfully merged PR #{pr_number}.')
-    elif response.status_code == 409:
-        print(f'Conflict! PR #{pr_number} could not be merged automatically.')
-    elif response.status_code == 404:
-        print(f'PR #{pr_number} not found. Check the repository and PR number.')
-    else:
-        print(f'Error merging PR #{pr_number}: {response.status_code}')
+            if response.status_code == 200:
+                print(f'Successfully merged PR #{pr_number}.')
+            elif response.status_code == 409:
+                print(f'Conflict! PR #{pr_number} could not be merged automatically.')
+            elif response.status_code == 404:
+                print(f'PR #{pr_number} not found. Check the repository and PR number.')
+            else:
+                print(f'Error merging PR #{pr_number}: {response.status_code}')
 
-def main():
-    print('Fetching open pull requests...')
-    pull_requests = get_open_pull_requests()
-    
-    pull_requests.sort(key=lambda pr: pr['created_at'])
+        def main():
+            pr_number = PR_NUMBER
+            print(f'Checking PR #{pr_number}...')
 
-    for pr in pull_requests:
-        pr_number = pr['number']
-        print(f'Checking PR #{pr_number}...')
+            if check_reviews(pr_number, required_approvals=1):
+                print(f'PR #{pr_number} has the required approvals. Attempting to merge...')
+                merge_pull_request(
+                    pr_number,
+                    merge_method='squash',
+                    commit_title=f'Merging PR #{pr_number}',
+                    commit_message='Merged automatically using Python script.'
+                )
+            else:
+                print(f'PR #{pr_number} does not have the required approvals. Skipping.')
 
-        if check_reviews(pr_number, required_approvals=1):
-            print(f'PR #{pr_number} has the required approvals. Attempting to merge...')
-            merge_pull_request(
-                pr_number,
-                merge_method='squash',
-                commit_title=f'Merging PR #{pr_number}',
-                commit_message='Merged automatically using Python script.'
-            )
-        else:
-            print(f'PR #{pr_number} does not have the required approvals. Skipping.')
-
-if __name__ == '__main__':
-    if not GITHUB_TOKEN:
-        print('GitHub token is required to run the script.')
-    else:
-        main()
-        "
+        if __name__ == '__main__':
+            if not GITHUB_TOKEN:
+                print('GitHub token is required to run the script.')
+            else:
+                main()
