@@ -1,4 +1,4 @@
-name: Run Python Script on PR Review
+name: Run Embedded Python Script on PR Review
 
 on:
   pull_request_review:
@@ -17,6 +17,10 @@ jobs:
       with:
         python-version: '3.x'
 
-    - name: Run Python script
+    - name: Run embedded Python script
       run: |
-        echo "88" | python main.py
+        echo "88" | python -c "
+import sys
+a = input()
+print(int(a) + 2 + 10)
+"
