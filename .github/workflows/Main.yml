@@ -1,29 +1,43 @@
 name: Main
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, review_requested]
-
+  workflow_run:
+    workflows: ["Lint Check", "Unit Tests", "Format Check"]
+    types:
+      - completed
+    
 jobs:
-  final_check:
-    name: Final Check
+  build-and-trigger:
     runs-on: ubuntu-latest
-    steps:
-      - name: Wait for all checks
-        run: |
-          echo "Waiting for Lint, Workflow_2, and Workflow_3"
-          gh api \
-            -X GET \
-            repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/check-runs \
-            | jq '.check_runs[] | select(.conclusion=="success")' > successful_checks.json
 
-      - name: Ensure all checks passed
-        run: |
-          required_checks=("Workflow_1" "Workflow_2" "Workflow_3")
-          for check in "${required_checks[@]}"; do
-            if ! grep -q "$check" successful_checks.json; then
-              echo "Required check $check did not pass or is missing"
-              exit 1
-            fi
-          done
-          echo "All checks passed!"
+    steps:
+    # Step 1: Checkout repository
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Step 2: Set up JDK 17
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: '17'
+
+    # Step 3: Compile Java program
+    - name: Compile Java program
+      run: javac Main.java
+
+    # Step 4: Run Java program
+    - name: Run Java program
+      run: java Main
+
+    # Step 5: Running JAVA CI (optional step for your CI pipeline)
+    - name: Step in Java CI
+      run: echo "Running JAVA CI"
+
+    # # Step 6: Trigger Workflow 2 via Repository Dispatch
+    # - name: Trigger Workflow 2 via Repository Dispatch
+    #   run: |
+    #     curl -X POST \
+    #       -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+    #       -d '{"event_type": "start-workflow-2", "client_payload": {"pr_number": "${{ github.event.pull_request.number }}"}}' \
+    #       https://api.github.com/repos/ksnarkhede/Task-Repo/dispatches
