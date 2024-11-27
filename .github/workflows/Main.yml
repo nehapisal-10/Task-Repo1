@@ -1,0 +1,29 @@
+name: Final Check
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  final_check:
+    name: Final Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for all checks
+        run: |
+          echo "Waiting for JavaCI, JavaCI2, JavaCI3"
+          gh api \
+            -X GET \
+            repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/check-runs \
+            | jq '.check_runs[] | select(.conclusion=="success")' > successful_checks.json
+
+      - name: Ensure all checks passed
+        run: |
+          required_checks=("Lint Check" "Unit Tests" "Format Check")
+          for check in "${required_checks[@]}"; do
+            if ! grep -q "$check" successful_checks.json; then
+              echo "Required check $check did not pass or is missing"
+              exit 1
+            fi
+          done
+          echo "All checks passed!"
