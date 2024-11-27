@@ -26,7 +26,7 @@ jobs:
 
     # Step 4: Run Java program
     - name: Run Java program
-      run: javacc Main
+      run: java Main
 
     # Step 5: Running JAVA CI (optional step for your CI pipeline)
     - name: Step in Java CI
