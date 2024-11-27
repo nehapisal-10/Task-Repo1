@@ -1,25 +1,38 @@
-name: Check PR Approvals
+name: Check PR Status
 
 on:
-  pull_request_review:
-    types: [submitted]
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 jobs:
-  check-approvals:
+  check-status:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      # Step 1: Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-      - name: Get PR approvals
-        id: get-approvals
+      # Step 2: Set up GitHub CLI
+      - name: Set up GitHub CLI
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      # Step 3: Fetch checks via GitHub CLI
+      - name: Fetch Check Runs for PR
         run: |
-          pr_number=66
-          approvals=$(curl -s -H "Authorization: token ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number/reviews" \
-            | jq '[.[] | select(.state == "APPROVED")] | length')
-          echo "approvals=$approvals" >> $GITHUB_ENV
+          echo "Fetching check statuses..."
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          echo "PR Number: $PR_NUMBER"
+          gh api "repos/$REPO/pulls/$PR_NUMBER" > pr_details.json
+          cat pr_details.json
 
-      - name: Output number of approvals
-        run: echo "Number of approvals -> ${{ env.approvals }}"
+      # Step 4: Parse and Display Results
+      - name: Analyze Check Runs
+        run: |
+          jq '. | {Checks: .checks}' pr_details.json > analysis.json
