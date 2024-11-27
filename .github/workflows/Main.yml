@@ -2,42 +2,47 @@ name: Main
 
 on:
   workflow_run:
-    workflows: ["Workflow_1", "Workflow_2", "Workflow_3"]
+    workflows: ["Workflow_1", "Workflow_2", "Workflow_3"]  # Ensure these workflows are correctly named
     types:
       - completed
-    
+
 jobs:
-  build-and-trigger:
+  final_check:
     runs-on: ubuntu-latest
+    if: ${{ success() }}  # Ensures that this job runs only if all workflows succeeded
 
     steps:
-    # Step 1: Checkout repository
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    # Step 2: Set up JDK 17
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'adopt'
-        java-version: '17'
+      - name: Ensure all checks passed
+        run: |
+          required_checks=("Workflow_1" "Workflow_2" "Workflow_3")
 
-    # Step 3: Compile Java program
-    - name: Compile Java program
-      run: javac Main.java
+          # Fetch check run statuses from the GitHub API
+          for i in {1..10}; do
+            echo "Fetching check run statuses..."
+            gh api -X GET \
+              repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/check-runs \
+              | jq '.check_runs[] | select(.conclusion=="success")' > successful_checks.json
 
-    # Step 4: Run Java program
-    - name: Run Java program
-      run: java Main
+            missing_checks=()
+            for check in "${required_checks[@]}"; do
+              if ! grep -q "$check" successful_checks.json; then
+                missing_checks+=("$check")
+              fi
+            done
 
-    # Step 5: Running JAVA CI (optional step for your CI pipeline)
-    - name: Step in Java CI
-      run: echo "Running JAVA CI"
+            if [ ${#missing_checks[@]} -eq 0 ]; then
+              echo "All required checks passed!"
+              break
+            fi
 
-    # # Step 6: Trigger Workflow 2 via Repository Dispatch
-    # - name: Trigger Workflow 2 via Repository Dispatch
-    #   run: |
-    #     curl -X POST \
-    #       -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-    #       -d '{"event_type": "start-workflow-2", "client_payload": {"pr_number": "${{ github.event.pull_request.number }}"}}' \
-    #       https://api.github.com/repos/ksnarkhede/Task-Repo/dispatches
+            echo "Missing checks: ${missing_checks[*]}. Retrying in 10 seconds..."
+            sleep 10
+          done
+
+          if [ ${#missing_checks[@]} -ne 0 ]; then
+            echo "Required checks did not pass: ${missing_checks[*]}"
+            exit 1
+          fi
