@@ -2,11 +2,8 @@ name: Workflow 1
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened  # Trigger when a review is submitted (approved or changes requested)
-
+    types: [opened, synchronize, reopened, review_requested]
+    
 jobs:
   build-and-trigger:
     runs-on: ubuntu-latest
