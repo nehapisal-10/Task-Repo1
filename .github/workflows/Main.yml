@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Wait for all checks
         run: |
-          echo "Waiting for Lint, Unit Tests, and Format Check"
+          echo "Waiting for Lint, Workflow_2, and Workflow_3"
           gh api \
             -X GET \
             repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/check-runs \
@@ -19,7 +19,7 @@ jobs:
 
       - name: Ensure all checks passed
         run: |
-          required_checks=("Lint Check" "Unit Tests" "Format Check")
+          required_checks=("Workflow_1" "Workflow_2" "Workflow_3")
           for check in "${required_checks[@]}"; do
             if ! grep -q "$check" successful_checks.json; then
               echo "Required check $check did not pass or is missing"
