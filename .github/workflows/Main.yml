@@ -2,7 +2,7 @@ name: Main
 
 on:
   workflow_run:
-    workflows: ["Lint Check", "Unit Tests", "Format Check"]
+    workflows: ["Workflow_1", "Workflow_2", "Workflow_3"]
     types:
       - completed
     
