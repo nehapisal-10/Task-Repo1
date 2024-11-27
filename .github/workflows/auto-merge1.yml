@@ -1,0 +1,29 @@
+name: Check PR Approvals
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request Number'
+        required: true
+        type: number
+
+jobs:
+  check-approvals:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Get PR approvals
+      id: get-approvals
+      run: |
+        pr_number=${{ github.event.inputs.pr_number }}
+        approvals=$(curl -s -H "Authorization: token ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number/reviews" \
+          | jq '[.[] | select(.state == "APPROVED")] | length')
+        echo "approvals=$approvals" >> $GITHUB_ENV
+
+    - name: Output number of approvals
+      run: echo "Number of approvals: ${{ env.approvals }}"
