@@ -1,8 +1,8 @@
-name: Final Check
+name: Main
 
 on:
-  pull_request_review:
-    types: [submitted]
+  pull_request:
+    types: [opened, synchronize, reopened, review_requested]
 
 jobs:
   final_check:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Wait for all checks
         run: |
-          echo "Waiting for JavaCI, JavaCI2, JavaCI3"
+          echo "Waiting for Lint, Unit Tests, and Format Check"
           gh api \
             -X GET \
             repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/check-runs \
@@ -19,7 +19,7 @@ jobs:
 
       - name: Ensure all checks passed
         run: |
-          required_checks=("Workflow_1" "Workflow_2" "Workflow_3")
+          required_checks=("Lint Check" "Unit Tests" "Format Check")
           for check in "${required_checks[@]}"; do
             if ! grep -q "$check" successful_checks.json; then
               echo "Required check $check did not pass or is missing"
